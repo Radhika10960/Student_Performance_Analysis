@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Performance Dashboard</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- Left Sidebar / Navigation -> We'll use this for Prediction Input -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+                <h2>Advisor</h2>
+            </div>
+            
+            <div class="nav-section">
+                <h3>New Prediction</h3>
+                <form id="predictionForm" class="prediction-form">
+                    <div class="input-group">
+                        <label for="hours"><i class="fa-solid fa-clock"></i> Hours Studied</label>
+                        <input type="number" id="hours" name="hours" min="0" max="168" placeholder="20" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="attendance"><i class="fa-solid fa-calendar-check"></i> Attendance (%)</label>
+                        <input type="number" id="attendance" name="attendance" min="0" max="100" placeholder="85" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="prev_score"><i class="fa-solid fa-chart-line"></i> Prev Score</label>
+                        <input type="number" id="prev_score" name="prev_score" min="0" max="100" placeholder="75" required>
+                    </div>
+
+                    <button type="submit" class="btn-predict" id="submitBtn">
+                        Analyze <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    
+                    <div id="loading" class="hidden loading-indicator">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Analyzing...
+                    </div>
+                </form>
+            </div>
+            
+            <div class="nav-section bottom-nav">
+                <a href="#" class="nav-item active"><i class="fa-solid fa-chart-pie"></i> Dashboard</a>
+                <a href="#" class="nav-item"><i class="fa-solid fa-users"></i> Students</a>
+                <a href="#" class="nav-item"><i class="fa-solid fa-gear"></i> Settings</a>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard Column -->
+        <main class="main-content">
+            <header class="top-nav">
+                <div class="search-bar">
+                    <i class="fa-solid fa-search"></i>
+                    <input type="text" placeholder="Search analytics...">
+                </div>
+                <div class="user-profile">
+                    <i class="fa-regular fa-bell"></i>
+                    <img src="https://ui-avatars.com/api/?name=Admin&background=6b4ce6&color=fff" alt="User">
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Top Section: Stats & Main Chart -->
+                <div class="stats-row">
+                    <!-- Global Metrics -->
+                    <div class="metric-card">
+                        <div class="metric-icon blue"><i class="fa-solid fa-users"></i></div>
+                        <div class="metric-info">
+                            <h4>Total Students</h4>
+                            <span id="totalStudentsValue" class="metric-value">--</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon purple"><i class="fa-solid fa-star"></i></div>
+                        <div class="metric-info">
+                            <h4>Avg Score</h4>
+                            <span id="avgScoreValue" class="metric-value">--</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Hours Chart -->
+                    <div class="chart-card top-chart">
+                        <div class="chart-header">
+                            <h4>Hours vs Score</h4>
+                            <span class="badge">Correlation</span>
+                        </div>
+                        <div class="chart-container-sm">
+                            <canvas id="hoursChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle Section: Prominent 3D Colorful Cards -->
+                <div class="feature-cards-row">
+                    <h3 class="section-title">Model Feature Importance</h3>
+                    <div class="colorful-cards">
+                        <div class="color-card card-blue">
+                            <div class="card-glow"></div>
+                            <div class="card-icon"><i class="fa-solid fa-clock"></i></div>
+                            <h4 id="feat-hours">--%</h4>
+                            <p>Hours Impact</p>
+                        </div>
+                        <div class="color-card card-purple">
+                            <div class="card-glow"></div>
+                            <div class="card-icon"><i class="fa-solid fa-calendar"></i></div>
+                            <h4 id="feat-attendance">--%</h4>
+                            <p>Attendance Impact</p>
+                        </div>
+                        <div class="color-card card-red">
+                            <div class="card-glow"></div>
+                            <div class="card-icon"><i class="fa-solid fa-history"></i></div>
+                            <h4 id="feat-prev">--%</h4>
+                            <p>History Impact</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Section: Another Chart -->
+                <div class="bottom-chart-row">
+                    <div class="chart-card wide-chart">
+                        <div class="chart-header">
+                            <h4>Attendance vs Score Distribution</h4>
+                        </div>
+                        <div class="chart-container-wide">
+                            <canvas id="attendanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </main>
+
+        <!-- Right Sidebar / Results -->
+        <aside class="right-panel">
+            <div class="panel-header">
+                <h3>Prediction Oracle</h3>
+            </div>
+            
+            <div id="results" class="results-wrapper">
+                <div class="empty-state" id="emptyState">
+                    <i class="fa-solid fa-wand-sparkles"></i>
+                    <p>Enter parameters to see predictions</p>
+                </div>
+
+                <!-- Hidden initially, revealed dynamically -->
+                <div class="prediction-view hidden" id="predictionView">
+                    <div class="score-display">
+                        <div class="score-circle">
+                            <span id="predictedScoreValue" class="sc-val">--</span>
+                        </div>
+                        <div class="score-label" id="performanceLevelBadge">--</div>
+                    </div>
+
+                    <div class="insights-section">
+                        <h4>Insights & Actions</h4>
+                        <ul id="recommendationList" class="recommendation-list">
+                            <!-- JS injected -->
+                        </ul>
+                    </div>
+                    
+                    <div class="feature-comparison">
+                        <h4>Feature Weights</h4>
+                        <div class="chart-container-sm">
+                            <canvas id="featureBarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
